@@ -1,11 +1,16 @@
 package id.ac.polinema.intentexercise;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.mobsandgeeks.saripaar.ValidationError;
@@ -15,60 +20,88 @@ import com.mobsandgeeks.saripaar.annotation.Email;
 import com.mobsandgeeks.saripaar.annotation.NotEmpty;
 import com.mobsandgeeks.saripaar.annotation.Password;
 
+import java.io.IOException;
 import java.util.List;
 
 public class RegisterActivity extends AppCompatActivity implements Validator.ValidationListener {
-    public static final String fullName_KEY = "fullName";
-    public static final String Email_KEY = "Email";
-    public static final String Password_KEY = "Password";
-    public static final String ConfirmPassword_KEY = "ConfirmPassword";
-    public static final String HomePage_KEY = "HomePage";
-    public static final String AboutYou_KEY = "AboutYou";
+    public static final String FULLNAME_KEY ="fullname";
+    public static final String EMAIL_KEY = "email";
+    public static final String PASSWORD_KEY = "password";
+    public static final String CONFIRMPASSWORD_KEY ="confirmpassword";
+    public static final String HOMEPAGE_KEY = "homepage";
+    public static final String ABOUT_KEY = "about";
+    public static final String IMAGE_KEY = "image";
+
     @NotEmpty
-    private EditText fullName;
+    private EditText fullnameInput;
+
     @NotEmpty
     @Email
-    private EditText Email;
+    private EditText emailInput;
+
     @NotEmpty
-    @com.mobsandgeeks.saripaar.annotation.Password
-    private EditText Password;
+    @Password(min = 6, scheme = Password.Scheme.ALPHA_NUMERIC_MIXED_CASE)
+    private EditText passwordInput;
+
     @NotEmpty
-    @com.mobsandgeeks.saripaar.annotation.ConfirmPassword
-    private EditText ConfirmPassword;
+    @ConfirmPassword
+    private EditText confirmpasswordInput;
+
     @NotEmpty
-    private EditText HomePage;
+    private EditText homepageInput;
+
     @NotEmpty
-    private EditText AboutYou;
-    protected Validator validator;
+    private EditText aboutInput;
+
+    private ImageView imageInput;
+
+    private String image;
+
+    private Validator validator;
+
+    private static final int GALLERY_REQUEST_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
+        fullnameInput=findViewById(R.id.text_fullname);
+        emailInput=findViewById(R.id.text_email);
+        passwordInput=findViewById(R.id.text_password);
+        confirmpasswordInput=findViewById(R.id.text_confirm_password);
+        homepageInput=findViewById(R.id.text_homepage);
+        aboutInput=findViewById(R.id.text_about);
+        imageInput=findViewById(R.id.image_profile);
         validator = new Validator(this);
         validator.setValidationListener(this);
-        validator.validate(true);
 
-        fullName = findViewById(R.id.text_fullname);
-        Email = findViewById(R.id.text_email);
-        Password = findViewById(R.id.text_password);
-        ConfirmPassword = findViewById(R.id.text_confirm_password);
-        HomePage = findViewById(R.id.text_homepage);
-        AboutYou = findViewById(R.id.text_about);
     }
 
-    @Override
+    public void handleProfile(View view) {validator.validate();}
+
     public void onValidationSucceeded() {
+        String fullname = fullnameInput.getText().toString();
+        String email = emailInput.getText().toString();
+        String password = passwordInput.getText().toString();
+        String confirmpassword = confirmpasswordInput.getText().toString();
+        String homepage = homepageInput.getText().toString();
+        String about = aboutInput.getText().toString();
 
+        Intent intent = new Intent(this, ProfileActivity.class);
+        intent.putExtra(FULLNAME_KEY, fullname);
+        intent.putExtra(EMAIL_KEY, email);
+        intent.putExtra(PASSWORD_KEY, password);
+        intent.putExtra(CONFIRMPASSWORD_KEY, confirmpassword);
+        intent.putExtra(HOMEPAGE_KEY, homepage);
+        intent.putExtra(ABOUT_KEY, about);
+        intent.putExtra(IMAGE_KEY,image);
+        startActivity(intent);
     }
-
-    @Override
     public void onValidationFailed(List<ValidationError> errors) {
         for (ValidationError error : errors) {
             View view = error.getView();
             String message = error.getCollatedErrorMessage(this);
-
             // Display error messages ;)
             if (view instanceof EditText) {
                 ((EditText) view).setError(message);
@@ -78,12 +111,30 @@ public class RegisterActivity extends AppCompatActivity implements Validator.Val
         }
     }
 
-    public void handleOK(View view) {
-        validator.validate();
-        Intent intent = new Intent(this, ProfileActivity.class);
-        intent.putExtra(FullName_KEY,FullName);
+    public void handleImage(View view) {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(intent, GALLERY_REQUEST_CODE);
+    }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if (resultCode == RESULT_CANCELED) {
+            return;
+        }
 
+        if (requestCode == GALLERY_REQUEST_CODE) {
+            if (data != null) {
+                try {
+                    image=data.getDataString();
+                    Uri imageUri = data.getData();
+                    Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+                    imageInput.setImageBitmap(bitmap);
+                } catch (IOException e) {
+                    Toast.makeText(this, "Can't load image", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
     }
 }
 
